@@ -40,7 +40,7 @@ Hasta que no se autentique, no permite el acceso al resto de los endpoints.
 
 **Vehicle**: 
 
-/vehicle Retorna de forma paginada el listado de vehicles. Por defecto, 1 pagina y 10 resultados
+/vehicles Retorna de forma paginada el listado de vehicles. Por defecto, 1 pagina y 10 resultados
 
 /vehicles?page=1&size=20 Lista de forma paginada, 1 pagina y 20 resultados. (Por ejemplo)
 
@@ -53,6 +53,8 @@ Hasta que no se autentique, no permite el acceso al resto de los endpoints.
 **TODO**
 
 Implementar filtrado por nombre. Quedo pendiente porque la construccion de las urls y el armado de los objetos varia bastante.
+
 Implementar el mostrado de informacion con respecto a la paginacion (pagina actual, next, previous, etc). Quedo pendiente
+
 Implementar documentacion mas robusta.
 
