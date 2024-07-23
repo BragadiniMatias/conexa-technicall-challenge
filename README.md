@@ -46,3 +46,13 @@ Hasta que no se autentique, no permite el acceso al resto de los endpoints.
 
 /starhips/id Retorma de forma especifica el starship
 
+
+
+
+
+**TODO**
+
+Implementar filtrado por nombre. Quedo pendiente porque la construccion de las urls y el armado de los objetos varia bastante.
+Implementar el mostrado de informacion con respecto a la paginacion (pagina actual, next, previous, etc). Quedo pendiente
+Implementar documentacion mas robusta.
+
