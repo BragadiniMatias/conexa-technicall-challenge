@@ -8,7 +8,7 @@ Asimismo, posee un sistema de autenticacion simple con JWT.
 
 Para poder **logearse**, utilizar el endpoint: 
 
-**login?user=conexa&password=challenge**
+**/login?user=conexa&password=challenge**
 
 El mismo retornara un token para poder acceder al listado y/o consulta por ID de cada entidad
 
