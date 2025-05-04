@@ -18,3 +18,13 @@ https://unchanged-karlie-matiasbragadini-ef7121c6.koyeb.app/conexa-api/v1/swagge
 Para poder autenticarse y que el resto de los endpoints no devuelvan un 401 (Unauthorized), se debe ejecutar primero el POST de login, con las credenciales username = conexa y password = challenge. Dicha ejecucion devuelve un bearer token que vamos a copiar y luego vamos a ingresar
 en la parte superior de Swagger -> Authorize. Una vez que se hizo esto, vamos a poder acceder al resto de los endpoints.
 
+## 1
+
+![image](https://github.com/user-attachments/assets/ab257d35-62d0-49d1-be4d-fcc796c3a91c)
+
+## 2
+
+![image](https://github.com/user-attachments/assets/077d052b-19ce-443a-bda2-e25717e663ba)
+
+
+
