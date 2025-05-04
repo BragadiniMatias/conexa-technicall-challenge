@@ -12,9 +12,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Film {
-    private String id;
-    private String title;
+    private String uid;
     private int episodeId;
+    private String title;
     private String openingCrawl;
     private String director;
     private String producer;

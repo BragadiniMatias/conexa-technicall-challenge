@@ -1,7 +1,9 @@
 package com.conexa.technicalchallenge.repository.converter;
 
 import com.conexa.technicalchallenge.domain.People;
-import com.conexa.technicalchallenge.repository.dao.people.PeopleDAO;
+import com.conexa.technicalchallenge.repository.dao.people.PeopleListItem;
+import com.conexa.technicalchallenge.repository.dao.people.PersonProperties;
+import com.conexa.technicalchallenge.repository.dao.people.PersonResult;
 import com.conexa.technicalchallenge.utils.constants.FormatConstants;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -14,10 +16,6 @@ import java.util.List;
 
 @Mapper
 public interface PeopleDAOConverter {
-    @Mapping(source = "created", target = "created", qualifiedByName = "stringToDate")
-    @Mapping(source = "edited", target = "edited", qualifiedByName = "stringToDate")
-    People daoToDomain (PeopleDAO peopleDAOO);
-
     @Named("stringToDate")
     default Date stringToDate(String dateTime) {
         if (dateTime != null && !dateTime.isEmpty()) {
@@ -33,5 +31,12 @@ public interface PeopleDAOConverter {
         return null;
     }
 
-    List<People> daoListToDomainList(List<PeopleDAO> daoList);
+    @Mapping(source = "created", target = "created", qualifiedByName = "stringToDate")
+    @Mapping(source = "edited", target = "edited", qualifiedByName = "stringToDate")
+    List<People> peopleListItemToPeople(List<PeopleListItem> daoList);
+
+    @Mapping(source = "created", target = "created", qualifiedByName = "stringToDate")
+    @Mapping(source = "edited", target = "edited", qualifiedByName = "stringToDate")
+    People personPropertiesToPeople(PersonProperties properties);
+
 }

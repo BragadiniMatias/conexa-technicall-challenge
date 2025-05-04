@@ -1,6 +1,7 @@
 package com.conexa.technicalchallenge.controller.dto.film;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,10 +11,10 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class FilmResponseDTO {
-    private String id;
-    private String title;
     private int episodeId;
+    private String title;
     private String openingCrawl;
     private String director;
     private String producer;

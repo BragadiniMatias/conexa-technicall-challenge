@@ -25,15 +25,30 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
+        String path = request.getRequestURI();
+
+
+        if (path.startsWith("/conexa-api/v1/swagger-ui")
+                || path.startsWith("/conexa-api/v1/v3/api-docs")
+                || path.startsWith("/conexa-api/v1/webjars")
+                || path.equals("/conexa-api/v1/swagger-ui.html")
+                || path.equals("/conexa-api/v1/login")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         String header = request.getHeader(SecurityConstants.HEADER);
         if (header == null || !header.startsWith(SecurityConstants.TOKEN_SUFFIX)) {
             chain.doFilter(request, response);
+            return;
         }
 
         UsernamePasswordAuthenticationToken authentication = getAuthentication(request);
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
         chain.doFilter(request, response);
     }
+
 
 
     private UsernamePasswordAuthenticationToken getAuthentication(HttpServletRequest httpServletRequest) {

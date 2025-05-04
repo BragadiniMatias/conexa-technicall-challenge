@@ -1,6 +1,8 @@
 package com.conexa.technicalchallenge.controller;
 
 import com.conexa.technicalchallenge.controller.converter.StarshipDTOConverter;
+import com.conexa.technicalchallenge.controller.dto.people.PeopleDTO;
+import com.conexa.technicalchallenge.controller.dto.starship.StarshipDTO;
 import com.conexa.technicalchallenge.controller.dto.starship.StarshipResponseDTO;
 import com.conexa.technicalchallenge.service.IStarshipService;
 import lombok.RequiredArgsConstructor;
@@ -17,21 +19,24 @@ import java.util.List;
 @RequestMapping("/starships")
 public class StarshipController {
 
-    @Autowired
-    IStarshipService service;
-
+    private final IStarshipService service;
     private final StarshipDTOConverter converter;
 
     @GetMapping
-    public ResponseEntity<List<StarshipResponseDTO>> getAll(final Pageable pageable) {
-        List<StarshipResponseDTO> response = converter.domainListToDTOList(service.getAll(pageable));
+    public ResponseEntity<StarshipResponseDTO> getAll(final Pageable pageable) {
+        StarshipResponseDTO response = converter.wrapperToResponse(service.getAll(pageable));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<StarshipResponseDTO> getById(@PathVariable final int id){
-        StarshipResponseDTO response = converter.domainToDTO(service.getById(id));
+    public ResponseEntity<StarshipDTO> getById(@PathVariable final int id){
+        StarshipDTO response = converter.domainToDTO(service.getById(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
+    @GetMapping("/name")
+    public ResponseEntity<List<StarshipDTO>> getByName(@RequestParam("name") final String name){
+        List<StarshipDTO> response = converter.domainListToDTOList(service.getByName(name));
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

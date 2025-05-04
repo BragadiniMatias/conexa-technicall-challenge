@@ -2,11 +2,11 @@ package com.conexa.technicalchallenge.service.impl;
 
 
 import com.conexa.technicalchallenge.domain.Film;
-import com.conexa.technicalchallenge.repository.FilmsRepository;
+import com.conexa.technicalchallenge.exceptions.DataNotFoundException;
+import com.conexa.technicalchallenge.repository.FIlmRepository;
 import com.conexa.technicalchallenge.service.IFilmService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,17 +15,26 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FilmServiceImpl implements IFilmService {
 
-    @Autowired
-    FilmsRepository repository;
+    private final FIlmRepository repository;
 
     @Override
-    public List<Film> getAll(final Pageable pageable) {
-        return repository.getAll(pageable);
+    public List<Film> getAll() {
+        return repository.getAll();
     }
 
     @Override
     public Film getById(final int id) {
         return repository.getById(id);
+    }
+
+    @Override
+    public Film getByName(final String name){
+        List<Film> films = repository.getAll();
+        return films.stream()
+                .filter(film -> StringUtils.containsIgnoreCase(film.getTitle(), name))
+                .findFirst()
+                .orElseThrow(() -> new DataNotFoundException("No film found with title: " + name));
+
     }
 
 }

@@ -1,13 +1,16 @@
 package com.conexa.technicalchallenge.domain;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class People {
+    private String uid;
     private String id;
     private String height;
     private String mass;

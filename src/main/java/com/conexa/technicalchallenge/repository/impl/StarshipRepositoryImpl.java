@@ -1,14 +1,17 @@
 package com.conexa.technicalchallenge.repository.impl;
 
 import com.conexa.technicalchallenge.domain.Starship;
+import com.conexa.technicalchallenge.domain.helpers.wrappers.GenericContentPaginationWrapper;
 import com.conexa.technicalchallenge.exceptions.DataNotFoundException;
 import com.conexa.technicalchallenge.exceptions.ExternalAPIServiceException;
 import com.conexa.technicalchallenge.exceptions.InvalidApiResponseException;
 import com.conexa.technicalchallenge.repository.StarshipRepository;
 import com.conexa.technicalchallenge.repository.converter.StarshipDAOConverter;
-import com.conexa.technicalchallenge.repository.dao.starship.StarshipDAO;
-import com.conexa.technicalchallenge.repository.dao.starship.StarshipResponseDAO;
-import com.conexa.technicalchallenge.repository.dao.starship.StarshipsResponseDAO;
+import com.conexa.technicalchallenge.repository.dao.starship.StarshipDetailResponse;
+import com.conexa.technicalchallenge.repository.dao.starship.StarshipListItem;
+import com.conexa.technicalchallenge.repository.dao.starship.StarshipListResponse;
+import com.conexa.technicalchallenge.repository.dao.starship.StarshipSearchResponse;
+import com.conexa.technicalchallenge.utils.URLBuilder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -20,7 +23,6 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -34,17 +36,18 @@ import static org.springframework.http.HttpMethod.GET;
 @AllArgsConstructor
 public class StarshipRepositoryImpl implements StarshipRepository {
 
-    private static final Logger LOGGER = Logger.getLogger(FilmsRepositoryImpl.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(FIlmRepositoryImpl.class.getName());
 
     @Autowired
     private RestTemplate restTemplate;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private final ObjectMapper objectMapper;
 
     private final StarshipDAOConverter converter;
 
     @Override
-    public List<Starship> getAll(final Pageable pageable) {
+    public GenericContentPaginationWrapper<Starship> getAll(final Pageable pageable) {
         HttpHeaders headers = createHeaders();
         HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
         ResponseEntity<String> response = getAllApiStarships(requestEntity, pageable);
@@ -57,6 +60,15 @@ public class StarshipRepositoryImpl implements StarshipRepository {
         HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
         ResponseEntity<String> response = getStarshipsById(requestEntity, id);
         return getResponseDataOfById(response.getBody());
+    }
+
+
+    @Override
+    public List<Starship> getByName(String name) {
+        HttpHeaders headers = createHeaders();
+        HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = getStarshipByName(requestEntity, name);
+        return getResponseDataOfByName(response.getBody());
     }
 
 
@@ -90,35 +102,64 @@ public class StarshipRepositoryImpl implements StarshipRepository {
         }
     }
 
-    private List<Starship> getResponseDataOfGetAll(String response) {
+    private ResponseEntity<String> getStarshipByName(HttpEntity<Object> requestEntity, final String name) {
         try {
-            StarshipsResponseDAO responseDAO = objectMapper.readValue(response, StarshipsResponseDAO.class);
-            List<StarshipDAO> starshipResult = responseDAO.getResults().stream().map(result -> {
-                StarshipDAO starship = new StarshipDAO();
-                starship.setId(result.getId());
-                starship.setName(result.getName());
-                starship.setUrl(result.getUrl());
-                return starship;
-            }).collect(Collectors.toList());
-            return converter.daoListToDomainList(starshipResult);
-        } catch (JsonProcessingException exception) {
-            LOGGER.log(Level.WARNING, "JSON Processing Exception: {0}", exception.getMessage());
-            throw new DataNotFoundException("Error processing JSON response for all starships");
+            return restTemplate.exchange(URLBuilder.buildUrlWithParam(BASE_STARSHIPS_URL, NAME_QUERY_PARAM, name),HttpMethod.GET, requestEntity, String.class);
+        } catch (HttpStatusCodeException exception) {
+            if (exception.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                throw new DataNotFoundException("People not found for name: " + name);
+            }
+            LOGGER.log(Level.WARNING, "HTTP Status Code Exception: {0}", exception.getMessage());
+            throw new InvalidApiResponseException("Invalid data for people with name: " + name);
+        } catch (Exception exception) {
+            LOGGER.log(Level.WARNING, "Exception: {0}", exception.getMessage());
+            throw new ExternalAPIServiceException("Unexpected error while retrieving people by name", exception);
+        }
+    }
+
+    private GenericContentPaginationWrapper<Starship> getResponseDataOfGetAll(String response) {
+        try {
+            StarshipListResponse responseObj = objectMapper.readValue(response, StarshipListResponse.class);
+            List<StarshipListItem> starships = responseObj.getResults().stream()
+                    .map(item -> {
+                        StarshipListItem s = new StarshipListItem();
+                        s.setUid(item.getUid());
+                        s.setName(item.getName());
+                        s.setUrl(item.getUrl());
+                        return s;
+                    })
+                    .collect(Collectors.toList());
+
+            return new GenericContentPaginationWrapper<Starship>(
+                    converter.starshipListItemToStarshipDomainList(starships),
+                    responseObj.getTotalRecords(),
+                    responseObj.getTotalPages()
+            );
+        } catch (JsonProcessingException e) {
+            LOGGER.log(Level.WARNING, "JSON Processing Exception: {0}", e.getMessage());
+            throw new DataNotFoundException("Error processing JSON response for all people");
         }
     }
 
 
     private Starship getResponseDataOfById(String response) {
         try {
-            StarshipResponseDAO responseDAO = objectMapper.readValue(response, StarshipResponseDAO.class);
-            Starship starship = converter.daoToDomain(responseDAO.getResult().getProperties());
-            starship.setId(responseDAO.getResult().getUid());
-            return starship;
+            StarshipDetailResponse responseDAO = objectMapper.readValue(response, StarshipDetailResponse.class);
+            return converter.starshipPropertiestoStarshipDomain(responseDAO.getResult().getProperties());
         } catch (JsonProcessingException exception) {
             LOGGER.log(Level.WARNING, "JSON Processing Exception: {0}", exception.getMessage());
             throw new DataNotFoundException("Error processing JSON response for starship by ID");
         }
+    }
 
+    private List<Starship> getResponseDataOfByName(String response) {
+        try {
+            StarshipSearchResponse responseObj = objectMapper.readValue(response, StarshipSearchResponse.class);
+            return responseObj.getResult().stream().map(a -> converter.starshipPropertiestoStarshipDomain(a.getProperties())).collect(Collectors.toList());
+        } catch (JsonProcessingException e) {
+            LOGGER.log(Level.WARNING, "JSON Processing Exception: {0}", e.getMessage());
+            throw new DataNotFoundException("Error processing JSON response for people by name");
+        }
     }
 
     private HttpHeaders createHeaders(){

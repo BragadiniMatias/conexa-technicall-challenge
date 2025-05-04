@@ -18,20 +18,24 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FilmController {
 
-    @Autowired
-    private IFilmService service;
-
+    private final IFilmService service;
     private final FilmDTOConverter converter;
 
     @GetMapping
-    ResponseEntity<List<FilmResponseDTO>> getAll(final Pageable pageable){
-        List<FilmResponseDTO> response = converter.domainListToDTOList(service.getAll(pageable));
+    public ResponseEntity<List<FilmResponseDTO>> getAll(){
+        List<FilmResponseDTO> response = converter.domainListToDTOList(service.getAll());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @GetMapping("{id}")
-    ResponseEntity<FilmResponseDTO> getById(@PathVariable("id") final int id){
+    @GetMapping("/{id}")
+    public ResponseEntity<FilmResponseDTO> getById(@PathVariable("id") final int id){
         FilmResponseDTO response = converter.domainToDTO(service.getById(id));
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/name")
+    public ResponseEntity<FilmResponseDTO> getByName(@RequestParam("name") final String name){
+        FilmResponseDTO response = converter.domainToDTO(service.getByName(name));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

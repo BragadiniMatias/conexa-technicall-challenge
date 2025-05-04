@@ -1,14 +1,19 @@
 package com.conexa.technicalchallenge.repository.impl;
 
+import com.conexa.technicalchallenge.domain.Starship;
 import com.conexa.technicalchallenge.domain.Vehicle;
+import com.conexa.technicalchallenge.domain.helpers.wrappers.GenericContentPaginationWrapper;
 import com.conexa.technicalchallenge.exceptions.DataNotFoundException;
 import com.conexa.technicalchallenge.exceptions.ExternalAPIServiceException;
 import com.conexa.technicalchallenge.exceptions.InvalidApiResponseException;
 import com.conexa.technicalchallenge.repository.VehicleRepository;
 import com.conexa.technicalchallenge.repository.converter.VehicleDAOConverter;
-import com.conexa.technicalchallenge.repository.dao.vehicle.VehicleDAO;
-import com.conexa.technicalchallenge.repository.dao.vehicle.VehicleResponseDAO;
-import com.conexa.technicalchallenge.repository.dao.vehicle.VehiclesResponseDAO;
+import com.conexa.technicalchallenge.repository.dao.starship.StarshipSearchResponse;
+import com.conexa.technicalchallenge.repository.dao.vehicle.VehicleDetailResponse;
+import com.conexa.technicalchallenge.repository.dao.vehicle.VehicleListItem;
+import com.conexa.technicalchallenge.repository.dao.vehicle.VehicleListResponse;
+import com.conexa.technicalchallenge.repository.dao.vehicle.VehicleSearchResponse;
+import com.conexa.technicalchallenge.utils.URLBuilder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -20,7 +25,6 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -35,15 +39,12 @@ import static org.springframework.http.HttpMethod.GET;
 public class VehicleRepositoryImpl implements VehicleRepository {
     private static final Logger LOGGER = Logger.getLogger(VehicleRepositoryImpl.class.getName());
 
-    @Autowired
     private RestTemplate restTemplate;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
+    private final ObjectMapper objectMapper;
     private final VehicleDAOConverter converter;
 
     @Override
-    public List<Vehicle> getAll(final Pageable pageable) {
+    public GenericContentPaginationWrapper<Vehicle> getAll(final Pageable pageable) {
         HttpHeaders headers = createHeaders();
         HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
         ResponseEntity<String> response = getAllApiVehicle(requestEntity, pageable);
@@ -58,6 +59,13 @@ public class VehicleRepositoryImpl implements VehicleRepository {
         return getResponseDataOfById(response.getBody());
     }
 
+    @Override
+    public List<Vehicle> getByName(String name) {
+        HttpHeaders headers = createHeaders();
+        HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = getStarshipByName(requestEntity, name);
+        return getResponseDataOfByName(response.getBody());
+    }
 
     private ResponseEntity<String> getAllApiVehicle(HttpEntity<Object> requestEntity, final Pageable pageable){
         try{
@@ -89,17 +97,36 @@ public class VehicleRepositoryImpl implements VehicleRepository {
         }
     }
 
-    private List<Vehicle> getResponseDataOfGetAll(String response) {
+    private ResponseEntity<String> getStarshipByName(HttpEntity<Object> requestEntity, final String name) {
         try {
-            VehiclesResponseDAO responseDAO = objectMapper.readValue(response, VehiclesResponseDAO.class);
-            List<VehicleDAO> vehicleResult = responseDAO.getResults().stream().map(result -> {
-                VehicleDAO vehicle = new VehicleDAO();
-                vehicle.setId(result.getId());
+            return restTemplate.exchange(URLBuilder.buildUrlWithParam(BASE_VEHICLE_URL, NAME_QUERY_PARAM, name),HttpMethod.GET, requestEntity, String.class);
+        } catch (HttpStatusCodeException exception) {
+            if (exception.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                throw new DataNotFoundException("Vehicle not found for name: " + name);
+            }
+            LOGGER.log(Level.WARNING, "HTTP Status Code Exception: {0}", exception.getMessage());
+            throw new InvalidApiResponseException("Invalid data for vehicle with name: " + name);
+        } catch (Exception exception) {
+            LOGGER.log(Level.WARNING, "Exception: {0}", exception.getMessage());
+            throw new ExternalAPIServiceException("Unexpected error while retrieving vehicle by name", exception);
+        }
+    }
+
+    private GenericContentPaginationWrapper<Vehicle> getResponseDataOfGetAll(String response) {
+        try {
+            VehicleListResponse responseDAO = objectMapper.readValue(response, VehicleListResponse.class);
+            List<VehicleListItem> vehicleResult = responseDAO.getResults().stream().map(result -> {
+                VehicleListItem vehicle = new VehicleListItem();
+                vehicle.setUid(result.getUid());
                 vehicle.setName(result.getName());
                 vehicle.setUrl(result.getUrl());
                 return vehicle;
             }).collect(Collectors.toList());
-            return converter.daoListToDomainList(vehicleResult);
+            return new GenericContentPaginationWrapper<Vehicle>(
+                    converter.vehicleListItemToVehicleDomainList(vehicleResult),
+                    responseDAO.getTotalRecords(),
+                    responseDAO.getTotalPages()
+            );
         } catch (JsonProcessingException exception) {
             LOGGER.log(Level.WARNING, "JSON Processing Exception: {0}", exception.getMessage());
             throw new DataNotFoundException("Error processing JSON response for all vehicles");
@@ -109,15 +136,24 @@ public class VehicleRepositoryImpl implements VehicleRepository {
 
     private Vehicle getResponseDataOfById(String response) {
         try {
-            VehicleResponseDAO responseDAO = objectMapper.readValue(response, VehicleResponseDAO.class);
-            Vehicle vehicle = converter.daoToDomain(responseDAO.getResult().getProperties());
-            vehicle.setId(responseDAO.getResult().getUid());
-            return vehicle;
+            VehicleDetailResponse responseObj = objectMapper.readValue(response, VehicleDetailResponse.class);
+            return converter.vehiclePropertiestoVehicleDomain(responseObj.getResult().getProperties());
         } catch (JsonProcessingException exception) {
             LOGGER.log(Level.WARNING, "JSON Processing Exception: {0}", exception.getMessage());
             throw new DataNotFoundException("Error processing JSON response for vehicle by ID");
         }
 
+    }
+
+
+    private List<Vehicle> getResponseDataOfByName(String response) {
+        try {
+            VehicleSearchResponse responseObj = objectMapper.readValue(response, VehicleSearchResponse.class);
+            return responseObj.getResult().stream().map(a -> converter.vehiclePropertiestoVehicleDomain(a.getProperties())).collect(Collectors.toList());
+        } catch (JsonProcessingException e) {
+            LOGGER.log(Level.WARNING, "JSON Processing Exception: {0}", e.getMessage());
+            throw new DataNotFoundException("Error processing JSON response for people by name");
+        }
     }
 
     private HttpHeaders createHeaders(){

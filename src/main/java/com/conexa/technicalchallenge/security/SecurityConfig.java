@@ -1,5 +1,6 @@
 package com.conexa.technicalchallenge.security;
 
+import com.conexa.technicalchallenge.utils.constants.SecurityConstants;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,11 +28,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Bean
-    //Es a modo de ejemplo. En un caso de uso real no se almacenarian las passwords en codigo.
     public InMemoryUserDetailsManager userDetails() throws Exception {
         UserDetails user = User
-                .withUsername("conexa")
-                .password(passwordEncoder().encode("challenge"))
+                .withUsername(SecurityConstants.BASE_USERNAME)
+                .password(passwordEncoder().encode(SecurityConstants.BASE_PASSWORD))
                 .roles("ADMIN")
                 .build();
         return new InMemoryUserDetailsManager(user);
@@ -41,10 +41,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/login")
-                .permitAll() // Permito nada mas acceder a logion
+                .antMatchers(
+                        "/login",
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/webjars/**"
+                )
+                .permitAll()
                 .anyRequest()
-                .authenticated() // Todo el resto inaccesible
+                .authenticated()
                 .and()
                 .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class);
     }
